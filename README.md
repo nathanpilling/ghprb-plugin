@@ -114,8 +114,10 @@ descriptor.save()
 ### Creating a job:
 * Create a new job.
 * Add the project's GitHub URL to the `GitHub project` field (the one you can enter into browser. eg: `https://github.com/janinko/ghprb`)
+  * **Do not** include `.git` at the end or a trailing slash — use `https://github.com/org/repo`, not `https://github.com/org/repo.git` or `https://github.com/org/repo/`. The `.git` suffix causes 404 errors when the plugin calls the GitHub API.
 * Select Git SCM.
 * Add your GitHub `Repository URL`.
+  * If using an SSH URL (`git@github.com:org/repo.git`), you **must** select an **SSH Username with private key** credential. A Username/Password credential will not work with SSH URLs.
 * Under Advanced, set `Name` to `origin` and:
   * If you **just** want to build PRs, set `refspec` to `+refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*`
   * If you want to build PRs **and** branches, set `refspec` to `+refs/heads/*:refs/remotes/origin/* +refs/pull/${ghprbPullId}/*:refs/remotes/origin/pr/${ghprbPullId}/*` (see note below about [parameterized builds](#parameterized-builds))
@@ -155,10 +157,14 @@ The plugin includes a built-in configuration validator to help ensure your job i
 
 **Example Configuration Issues Detected:**
 
-* Missing GitHub project URL
+* Missing or malformed GitHub project URL (including `.git` suffix or trailing slash)
 * Git SCM not configured
 * Branch specifier missing ghprb variables
 * Refspec not including pull request branches
+* SSH remote URL with a non-SSH credential selected
+* GitHub Pull Request Builder trigger not enabled on the job
+* Empty admin list (all PR authors will be silently skipped)
+* GitHub API using anonymous connection (rate limits apply, private repos inaccessible)
 
 You can validate at any time before saving to ensure your configuration is correct. The validator also runs automatically when the trigger starts up and logs any issues to Jenkins logs.
 

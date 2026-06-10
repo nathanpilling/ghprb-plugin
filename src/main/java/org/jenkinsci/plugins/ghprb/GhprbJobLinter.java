@@ -1,16 +1,17 @@
 package org.jenkinsci.plugins.ghprb;
 
+import com.cloudbees.plugins.credentials.common.StandardCredentials;
+import com.cloudbees.plugins.credentials.common.UsernamePasswordCredentials;
 import com.coravy.hudson.plugins.github.GithubProjectProperty;
 import hudson.model.Job;
 import hudson.plugins.git.GitSCM;
+import hudson.plugins.git.UserRemoteConfig;
 import hudson.scm.SCM;
 import hudson.util.FormValidation;
-import jenkins.model.ParameterizedJobMixIn;
 import org.apache.commons.lang.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -41,16 +42,25 @@ public class GhprbJobLinter {
         checkGitHubProjectUrl();
         checkGitSCM();
         checkBranchSpec();
+        checkGitCredential();
         checkGitConfiguration();
+        checkTriggerConfig();
     }
 
     /**
-     * Validates that a GitHub project URL is configured.
+     * Validates that a GitHub project URL is configured and well-formed.
      */
     private void checkGitHubProjectUrl() {
         GithubProjectProperty githubProperty = job.getProperty(GithubProjectProperty.class);
         if (githubProperty == null || githubProperty.getProjectUrl() == null) {
             errors.add("GitHub project URL is not configured. Add a GitHub project URL in the job configuration.");
+            return;
+        }
+        String url = githubProperty.getProjectUrl().toString();
+        if (url.endsWith(".git") || url.endsWith(".git/")) {
+            errors.add("GitHub project URL ends with '.git'. Remove the .git suffix (e.g. https://github.com/org/repo, not https://github.com/org/repo.git).");
+        } else if (url.endsWith("/")) {
+            warnings.add("GitHub project URL has a trailing slash. Consider removing it.");
         }
     }
 
@@ -122,6 +132,68 @@ public class GhprbJobLinter {
             if (hasCloneExtension) {
                 LOGGER.log(java.util.logging.Level.FINE, "Job {0} uses CloneOption extension", 
                         job != null ? job.getFullName() : "unknown");
+            }
+        }
+    }
+
+    /**
+     * Validates that the Git credential type matches the remote URL scheme.
+     */
+    private void checkGitCredential() {
+        GitSCM gitScm = getGitSCM();
+        if (gitScm == null || gitScm.getUserRemoteConfigs().isEmpty()) {
+            return;
+        }
+        UserRemoteConfig remote = gitScm.getUserRemoteConfigs().get(0);
+        String remoteUrl = remote.getUrl();
+        String credentialsId = remote.getCredentialsId();
+
+        boolean isSshUrl = remoteUrl != null &&
+                (remoteUrl.startsWith("git@") || remoteUrl.startsWith("ssh://"));
+
+        if (isSshUrl) {
+            if (StringUtils.isEmpty(credentialsId)) {
+                errors.add("Git remote URL uses SSH but no credential is selected. "
+                        + "Add an SSH Username with private key credential and select it in the Git SCM configuration.");
+                return;
+            }
+            StandardCredentials cred = Ghprb.lookupCredentials(job, credentialsId, remoteUrl);
+            if (cred != null && cred instanceof UsernamePasswordCredentials) {
+                errors.add("Git remote URL uses SSH (git@...) but the selected credential is Username/Password. "
+                        + "Create an SSH Username with private key credential instead.");
+            }
+        }
+    }
+
+    /**
+     * Validates the GHPRB trigger configuration on the job.
+     */
+    private void checkTriggerConfig() {
+        GhprbTrigger trigger = Ghprb.extractTrigger(job);
+        if (trigger == null) {
+            errors.add("GitHub Pull Request Builder trigger is not enabled on this job.");
+            return;
+        }
+
+        // Check admin list
+        String adminlist = trigger.getAdminlist();
+        if (StringUtils.isEmpty(adminlist) || adminlist.trim().isEmpty()) {
+            warnings.add("Admin list is empty. No users are whitelisted as admins. "
+                    + "Add at least one GitHub username to the Admin list, or enable 'Permit all'.");
+        }
+
+        // Check GitHub API credentials
+        String gitHubAuthId = trigger.getGitHubAuthId();
+        if (StringUtils.isEmpty(gitHubAuthId)) {
+            errors.add("GitHub API credentials are not configured. "
+                    + "Select a GitHub API credential in the trigger configuration "
+                    + "(configure it first in Manage Jenkins → Configure System → GitHub Pull Request Builder).");
+        } else {
+            GhprbGitHubAuth auth = trigger.getDescriptor().getGitHubAuth(gitHubAuthId);
+            if (auth != null && StringUtils.isEmpty(auth.getCredentialsId())) {
+                warnings.add("GitHub API is using an anonymous connection. "
+                        + "API rate limits will apply and private repositories will not be accessible. "
+                        + "Configure a personal access token credential.");
             }
         }
     }

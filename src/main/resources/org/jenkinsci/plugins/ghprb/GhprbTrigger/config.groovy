@@ -46,21 +46,22 @@ function validateGhprbConfiguration() {
   loadingDiv.style.display = 'block';
   resultDiv.style.display = 'none';
   
-  // Get current job name from the form
-  var jobName = document.getElementsByName('name')[0];
-  if (!jobName || !jobName.value) {
+  // Extract job name from URL path (e.g. /jenkins/job/foo/configure -> foo)
+  var path = window.location.pathname;
+  var jobMatch = path.match(new RegExp('/job/([^/]+)'));
+  var jobNameValue = jobMatch ? decodeURIComponent(jobMatch[1]) : null;
+  if (!jobNameValue) {
     loadingDiv.style.display = 'none';
-    errorsDiv.innerHTML = '<strong>Error:</strong> Job name is required';
+    errorsDiv.innerHTML = '<strong>Error:</strong> Could not determine job name from URL. Save the job first.';
     resultDiv.style.display = 'block';
     return;
   }
-  
+
   // Call the validation endpoint
-  var path = window.location.pathname;
   var rootPath = path.substring(0, path.indexOf('/job/') > -1 ? path.indexOf('/job/') : path.lastIndexOf('/'));
-  
-  fetch(rootPath + '/descriptor/org.jenkinsci.plugins.ghprb.GhprbTrigger/validateJobConfiguration?jobName=' + 
-        encodeURIComponent(jobName.value), {
+
+  fetch(rootPath + '/descriptor/org.jenkinsci.plugins.ghprb.GhprbTrigger/validateJobConfiguration?jobName=' +
+        encodeURIComponent(jobNameValue), {
     method: 'GET',
     credentials: 'same-origin'
   })

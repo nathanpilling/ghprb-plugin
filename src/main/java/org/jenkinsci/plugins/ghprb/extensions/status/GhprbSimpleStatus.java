@@ -134,11 +134,10 @@ public class GhprbSimpleStatus extends GhprbExtension implements
         if (!StringUtils.isEmpty(triggeredStatus)) {
             sb.append(Ghprb.replaceMacros(project, triggeredStatus));
         } else {
-            sb.append("Build triggered");
             if (isMergeable) {
-                sb.append(" for merge commit.");
+                sb.append("Build triggered for PR merge commit.");
             } else {
-                sb.append(" for original commit.");
+                sb.append("Build triggered for PR head commit.");
             }
         }
 
@@ -184,9 +183,10 @@ public class GhprbSimpleStatus extends GhprbExtension implements
         GhprbCause c = Ghprb.getCause(build);
         StringBuilder sb = new StringBuilder();
         if (StringUtils.isEmpty(startedStatus)) {
-            sb.append("Build started");
             if (c != null) {
-                sb.append(c.isMerged() ? " for merge commit." : " for original commit.");
+                sb.append(c.isMerged() ? "Building PR merge commit." : "Building PR head commit.");
+            } else {
+                sb.append("Build in progress.");
             }
         } else {
             sb.append(Ghprb.replaceMacros(build, listener, startedStatus));
@@ -212,7 +212,15 @@ public class GhprbSimpleStatus extends GhprbExtension implements
         StringBuilder sb = new StringBuilder();
 
         if (completedStatus == null || completedStatus.isEmpty()) {
-            sb.append("Build finished.");
+            if (state == GHCommitState.SUCCESS) {
+                sb.append("Build succeeded.");
+            } else if (state == GHCommitState.FAILURE) {
+                sb.append("Build failed.");
+            } else if (state == GHCommitState.ERROR) {
+                sb.append("Build errored.");
+            } else {
+                sb.append("Build finished.");
+            }
         } else {
             for (GhprbBuildResultMessage buildStatus : completedStatus) {
                 sb.append(buildStatus.postBuildComment(build, listener));
