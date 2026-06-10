@@ -9,8 +9,8 @@
         <relativePath />
     </parent>
 
-    <artifactId>ghprb</artifactId>
-    <name>GitHub Pull Request Builder</name>
+    <artifactId>github-pr-trigger</artifactId>
+    <name>GitHub PR Trigger</name>
     <version>1.42.3-SNAPSHOT</version>
     <packaging>hpi</packaging>
 
