@@ -328,7 +328,7 @@ public class GhprbRepository implements Saveable {
     private String getHookUrl() {
         String baseUrl = trigger.getGitHubApiAuth().getJenkinsUrl();
         if (baseUrl == null) {
-            baseUrl = Jenkins.getInstance().getRootUrl();
+            baseUrl = Jenkins.get().getRootUrl();
         }
         return baseUrl + GhprbRootAction.URL + "/";
     }

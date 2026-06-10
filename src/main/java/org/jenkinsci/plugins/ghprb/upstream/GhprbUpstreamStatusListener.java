@@ -5,6 +5,7 @@ import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.model.Environment;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
 import org.jenkinsci.plugins.ghprb.Ghprb;
@@ -29,7 +30,7 @@ import java.util.logging.Logger;
  * downstream jobs that have the option configured.
  */
 @Extension
-public class GhprbUpstreamStatusListener extends RunListener<AbstractBuild<?, ?>> {
+public class GhprbUpstreamStatusListener extends RunListener<Run<?, ?>> {
 
     private static final Logger LOGGER = Logger.getLogger(GhprbUpstreamStatusListener.class.getName());
 
@@ -38,7 +39,7 @@ public class GhprbUpstreamStatusListener extends RunListener<AbstractBuild<?, ?>
     private GHRepository repo;
 
     // Gets all the custom env vars needed to send information to GitHub
-    private Map<String, String> returnEnvironmentVars(AbstractBuild<?, ?> build, TaskListener listener) {
+    private Map<String, String> returnEnvironmentVars(Run<?, ?> build, TaskListener listener) {
         Map<String, String> envVars = Ghprb.getEnvVars(build, listener);
 
         if (!envVars.containsKey("ghprbUpstreamStatus")) {
@@ -49,7 +50,7 @@ public class GhprbUpstreamStatusListener extends RunListener<AbstractBuild<?, ?>
                 .getGitHubAuth(envVars.get("ghprbCredentialsId"));
 
         try {
-            GitHub gh = auth.getConnection(build.getProject());
+            GitHub gh = auth.getConnection(build.getParent());
             repo = gh.getRepository(envVars.get("ghprbGhRepository"));
             return envVars;
         } catch (Exception e) {
@@ -98,7 +99,7 @@ public class GhprbUpstreamStatusListener extends RunListener<AbstractBuild<?, ?>
     }
 
     @Override
-    public void onStarted(AbstractBuild<?, ?> build, TaskListener listener) {
+    public void onStarted(Run<?, ?> build, TaskListener listener) {
         Map<String, String> envVars = returnEnvironmentVars(build, listener);
         if (envVars == null) {
             return;
@@ -113,7 +114,7 @@ public class GhprbUpstreamStatusListener extends RunListener<AbstractBuild<?, ?>
 
     // Sets the status to the build result when the job is done, and then calls the createCommitStatus method to send it to GitHub
     @Override
-    public void onCompleted(AbstractBuild<?, ?> build, TaskListener listener) {
+    public void onCompleted(Run<?, ?> build, TaskListener listener) {
         Map<String, String> envVars = returnEnvironmentVars(build, listener);
         if (envVars == null) {
             return;

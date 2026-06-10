@@ -20,7 +20,7 @@ import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.UserRemoteConfig;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
-import org.joda.time.DateTime;
+import java.util.Date;
 import org.kohsuke.github.GHCommitPointer;
 import org.kohsuke.github.GHPullRequest;
 import org.kohsuke.github.GHRateLimit;
@@ -38,8 +38,8 @@ import org.mockito.Mockito;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +47,7 @@ import java.util.Map.Entry;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
 
 public final class GhprbTestUtil {
@@ -253,22 +253,20 @@ public final class GhprbTestUtil {
         Mockito.when(itr.hasNext()).thenReturn(false);
     }
 
-    public static void mockPR(GHPullRequest prToMock, GHCommitPointer commitPointer, DateTime... updatedDate) throws Exception {
+    public static void mockPR(GHPullRequest prToMock, GHCommitPointer commitPointer, Date... updatedDate) throws Exception {
 
         given(prToMock.getHead()).willReturn(commitPointer);
         given(prToMock.getBase()).willReturn(commitPointer);
-        given(prToMock.getUrl()).willReturn(new URL("http://127.0.0.1"));
-        given(prToMock.getApiURL()).willReturn(new URL("http://127.0.0.1"));
 
         if (updatedDate.length > 1) {
             given(prToMock.getUpdatedAt())
-                    .willReturn(updatedDate[0].toDate())
-                    .willReturn(updatedDate[0].toDate())
-                    .willReturn(updatedDate[1].toDate())
-                    .willReturn(updatedDate[1].toDate())
-                    .willReturn(updatedDate[1].toDate());
+                    .willReturn(updatedDate[0])
+                    .willReturn(updatedDate[0])
+                    .willReturn(updatedDate[1])
+                    .willReturn(updatedDate[1])
+                    .willReturn(updatedDate[1]);
         } else {
-            given(prToMock.getUpdatedAt()).willReturn(updatedDate[0].toDate());
+            given(prToMock.getUpdatedAt()).willReturn(updatedDate[0]);
         }
     }
 
@@ -339,18 +337,13 @@ public final class GhprbTestUtil {
     }
 
     static void setFinal(Object o, Field field, Object newValue) throws Exception {
-        field.setAccessible(true);
-
-        Field modifiersField = Field.class.getDeclaredField("modifiers");
-        modifiersField.setAccessible(true);
-        int prevModifiers = field.getModifiers();
-        modifiersField.setInt(field, prevModifiers & ~Modifier.FINAL);
-
-        field.set(o, newValue);
-        modifiersField.setInt(field, prevModifiers);
-        modifiersField.setAccessible(false);
-        field.setAccessible(false);
-
+        // Java 17-compatible: use sun.misc.Unsafe to set final fields (via reflection to avoid sun.* import)
+        Class<?> unsafeType = Class.forName("sun.misc.Unsafe");
+        Field f = unsafeType.getDeclaredField("theUnsafe");
+        f.setAccessible(true);
+        Object unsafe = f.get(null);
+        long offset = (Long) unsafeType.getMethod("objectFieldOffset", Field.class).invoke(unsafe, field);
+        unsafeType.getMethod("putObject", Object.class, long.class, Object.class).invoke(unsafe, o, offset, newValue);
     }
 
     @SuppressWarnings("unchecked")
@@ -368,7 +361,7 @@ public final class GhprbTestUtil {
         req = Mockito.mock(RequestImpl.class);
 
         given(req.bindJSON(any(Class.class), any(JSONObject.class))).willCallRealMethod();
-        given(req.bindJSON(any(Class.class), any(Class.class), any(JSONObject.class))).willCallRealMethod();
+        given(req.bindJSON(Mockito.any(), any(Class.class), Mockito.any())).willCallRealMethod();
         given(req.setBindInterceptor(any(BindInterceptor.class))).willCallRealMethod();
         given(req.setBindListener(any(BindInterceptor.class))).willCallRealMethod();
         given(req.getWebApp()).willReturn(webApp);
@@ -388,7 +381,7 @@ public final class GhprbTestUtil {
                 null,
                 null,
                 "",
-                null);
+                Collections.emptyList());
     }
 
 
@@ -422,7 +415,7 @@ public final class GhprbTestUtil {
 
         GhprbTrigger trigger = spy(req.bindJSON(GhprbTrigger.class, defaults));
 
-        GHRateLimit limit = new GHRateLimit();
+        GHRateLimit limit = Mockito.mock(GHRateLimit.class);
         limit.remaining = INITIAL_RATE_LIMIT;
 
         GitHub github = Mockito.mock(GitHub.class);

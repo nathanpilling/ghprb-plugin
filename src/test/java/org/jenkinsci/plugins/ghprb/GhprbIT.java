@@ -6,7 +6,8 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ParameterValue;
 import hudson.model.Run;
 import net.sf.json.JSONObject;
-import org.joda.time.DateTime;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -18,14 +19,14 @@ import org.kohsuke.stapler.BindInterceptor;
 import org.kohsuke.stapler.RequestImpl;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static com.google.common.collect.Lists.newArrayList;
-import static org.fest.assertions.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.any;
 
@@ -89,12 +90,11 @@ public class GhprbIT extends GhprbITBaseTestCase {
     @Test
     public void shouldBuildTriggersOnUpdatingRetestMessagePR() throws Exception {
         // GIVEN
-        given(ghPullRequest.getCreatedAt()).willReturn(new DateTime().toDate());
         GhprbTestUtil.triggerRunAndWait(10, trigger, project);
         assertThat(project.getBuilds().toArray().length).isEqualTo(1);
 
         given(comment.getBody()).willReturn("retest this please");
-        given(comment.getUpdatedAt()).willReturn(new DateTime().plusDays(1).toDate());
+        given(comment.getUpdatedAt()).willReturn(new Date(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1)));
         given(comment.getUser()).willReturn(ghUser);
 
         given(ghPullRequest.getComments()).willReturn(newArrayList(comment));
@@ -111,7 +111,7 @@ public class GhprbIT extends GhprbITBaseTestCase {
         given(commitPointer.getSha()).willReturn("sha");
 
         given(comment.getBody()).willReturn("retest this please");
-        given(comment.getUpdatedAt()).willReturn(new DateTime().plusDays(1).toDate());
+        given(comment.getUpdatedAt()).willReturn(new Date(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1)));
         given(comment.getUser()).willReturn(ghUser);
         given(ghPullRequest.getComments()).willReturn(newArrayList(comment));
         given(ghPullRequest.getNumber()).willReturn(5);

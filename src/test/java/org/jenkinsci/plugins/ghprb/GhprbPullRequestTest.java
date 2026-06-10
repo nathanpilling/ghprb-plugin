@@ -1,8 +1,8 @@
 package org.jenkinsci.plugins.ghprb;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.kohsuke.github.GHCommitPointer;
 import org.kohsuke.github.GHIssueComment;
 import org.kohsuke.github.GHPullRequest;
@@ -12,11 +12,12 @@ import org.kohsuke.github.GHUser;
 import org.kohsuke.github.PagedIterable;
 import org.kohsuke.github.PagedIterator;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.mockito.stubbing.OngoingStubbing;
-import org.powermock.api.mockito.PowerMockito;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,12 +27,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.regex.Pattern;
 
-import static org.fest.assertions.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -42,8 +43,8 @@ import static org.mockito.Mockito.when;
 /**
  * Unit test for {@link org.jenkinsci.plugins.ghprb.GhprbPullRequest}.
  */
-@RunWith(PowerMockRunner.class)
-@PrepareForTest({GhprbPullRequest.class})
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class GhprbPullRequestTest {
 
     @Mock
@@ -73,14 +74,13 @@ public class GhprbPullRequestTest {
     @Mock
     private GHIssueComment ghIssueComment;
 
-    @Before
+    @BeforeEach
     public void setup() throws IOException {
         given(head.getSha()).willReturn("some sha");
         given(base.getRef()).willReturn("some ref");
 
         // Mocks for GHPullRequest
         given(pr.getNumber()).willReturn(10);
-        given(pr.getCreatedAt()).willReturn(new Date());
         given(pr.getUpdatedAt()).willReturn(new Date());
         given(pr.getTitle()).willReturn("title");
         given(pr.getHead()).willReturn(head);
@@ -349,15 +349,14 @@ public class GhprbPullRequestTest {
 
     @Test
     public void shouldNotAddDuplicateRequestForTestingComment() throws Exception {
-        PowerMockito.mockStatic(GhprbPullRequest.class);
-        // GIVEN
-        given(GhprbPullRequest.getRequestForTestingPhrase()).willReturn("My phrase: request for testing");
-        given(helper.isWhitelisted(ghUser)).willReturn(false);
-
-        // WHEN
-        new GhprbPullRequest(pr, helper, repo);
-
-        // THEN
-        verify(repo, never()).addComment(anyInt(), anyString());
+        try (MockedStatic<GhprbPullRequest> mocked = org.mockito.Mockito.mockStatic(GhprbPullRequest.class)) {
+            // GIVEN
+            mocked.when(GhprbPullRequest::getRequestForTestingPhrase).thenReturn("My phrase: request for testing");
+            given(helper.isWhitelisted(ghUser)).willReturn(false);
+            // WHEN
+            new GhprbPullRequest(pr, helper, repo);
+            // THEN
+            verify(repo, never()).addComment(anyInt(), anyString());
+        }
     }
 }

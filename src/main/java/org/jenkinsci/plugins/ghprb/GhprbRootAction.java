@@ -4,9 +4,8 @@ import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.UnprotectedRootAction;
 import hudson.security.ACL;
+import hudson.security.ACLContext;
 import hudson.security.csrf.CrumbExclusion;
-import org.acegisecurity.Authentication;
-import org.acegisecurity.context.SecurityContextHolder;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.github.GHEventPayload.IssueComment;
@@ -126,15 +125,11 @@ public class GhprbRootAction implements UnprotectedRootAction {
                               String payload,
                               String body) {
 
-        // Not sure if this is needed, but it may be to get info about old builds.
-        Authentication old = SecurityContextHolder.getContext().getAuthentication();
-        SecurityContextHolder.getContext().setAuthentication(ACL.SYSTEM);
-
         IssueComment comment = null;
         PullRequest pr = null;
         String repoName = null;
 
-        try {
+        try (ACLContext ignored = ACL.as2(ACL.SYSTEM2)) {
             GitHub gh = GitHub.connectAnonymously();
 
             if (StringUtils.equalsIgnoreCase("issue_comment", event)) {
@@ -176,8 +171,6 @@ public class GhprbRootAction implements UnprotectedRootAction {
 
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Unable to connect to GitHub anonymously", e);
-        } finally {
-            SecurityContextHolder.getContext().setAuthentication(old);
         }
     }
 

@@ -1,8 +1,8 @@
 package org.jenkinsci.plugins.ghprb.manager.configuration;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.fest.assertions.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * @author mdelapenya (Manuel de la Peña)

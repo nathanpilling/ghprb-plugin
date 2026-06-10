@@ -5,7 +5,9 @@ import hudson.model.AbstractProject;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.plugins.git.GitSCM;
-import org.joda.time.DateTime;
+import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.kohsuke.github.GHCommitPointer;
 import org.kohsuke.github.GHIssueState;
 import org.kohsuke.github.GHPullRequest;
@@ -16,13 +18,11 @@ import org.kohsuke.github.GitHub;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 
-import java.util.Map;
-
 import static com.google.common.collect.Lists.newArrayList;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 
 /**
  * @author mdelapenya (Manuel de la Peña)
@@ -54,7 +54,7 @@ public abstract class GhprbITBaseTestCase {
 
     protected GhprbTrigger trigger;
 
-    protected GHRateLimit ghRateLimit = new GHRateLimit();
+    protected GHRateLimit ghRateLimit = Mockito.mock(GHRateLimit.class);
 
     protected void beforeTest(
             Map<String, Object> globalConfig,
@@ -78,7 +78,7 @@ public abstract class GhprbITBaseTestCase {
 
         given(ghRepository.getName()).willReturn("dropwizard");
 
-        GhprbTestUtil.mockPR(ghPullRequest, commitPointer, new DateTime(), new DateTime().plusDays(1));
+        GhprbTestUtil.mockPR(ghPullRequest, commitPointer, new Date(), new Date(System.currentTimeMillis() + TimeUnit.DAYS.toMillis(1)));
 
         given(ghRepository.getPullRequests(eq(GHIssueState.OPEN)))
                 .willReturn(newArrayList(ghPullRequest))

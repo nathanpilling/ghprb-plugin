@@ -4,7 +4,6 @@ import com.coravy.hudson.plugins.github.GithubProjectProperty;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.FreeStyleProject;
-import hudson.model.ItemGroup;
 import hudson.model.Result;
 import hudson.model.Run;
 import hudson.model.TaskListener;
@@ -22,12 +21,11 @@ import org.kohsuke.github.GHPullRequestCommitDetail;
 import org.kohsuke.github.GHPullRequestCommitDetail.Commit;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GHUser;
-import org.kohsuke.github.GitUser;
 import org.kohsuke.github.PagedIterable;
 import org.kohsuke.github.PagedIterator;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,9 +37,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -54,7 +52,7 @@ public class GhprbPullRequestMergeTest {
     @Rule
     public JenkinsRule jenkinsRule = new JenkinsRule();
 
-    private FreeStyleProject project = mock(FreeStyleProject.class);
+    private FreeStyleProject project;
 
     private Run<?, ?> build = mock(Run.class);
 
@@ -65,7 +63,7 @@ public class GhprbPullRequestMergeTest {
     private GHPullRequest pr;
 
     @Mock
-    private GitUser committer;
+    private GHPullRequestCommitDetail.Authorship committer;
 
     @Mock
     private GHUser triggerSender;
@@ -87,9 +85,6 @@ public class GhprbPullRequestMergeTest {
 
     @Mock
     private TaskListener listener;
-
-    @Mock
-    private ItemGroup<?> parent;
 
     @Mock
     private Launcher launcher;
@@ -124,6 +119,8 @@ public class GhprbPullRequestMergeTest {
     public void beforeTest() throws Exception {
         launcher = mock(Launcher.class);
 
+        project = spy(jenkinsRule.createFreeStyleProject());
+
         mockFilePath = new FilePath(new File(""));
 
         triggerValues = new HashMap<String, Object>(10);
@@ -150,12 +147,9 @@ public class GhprbPullRequestMergeTest {
 
         PrintStream logger = mock(PrintStream.class);
 
-        given(parent.getFullName()).willReturn("");
-
         Map<TriggerDescriptor, Trigger<?>> map = new HashMap<TriggerDescriptor, Trigger<?>>();
         map.put(descriptor, trigger);
 
-        given(project.getParent()).willReturn(parent);
         given(project.getTriggers()).willReturn(map);
         given(project.getName()).willReturn("project");
         given(project.getProperty(GithubProjectProperty.class)).willReturn(projectProperty);

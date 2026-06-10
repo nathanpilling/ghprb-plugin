@@ -243,11 +243,17 @@ public class GhprbGitHubAuth extends AbstractDescribableImpl<GhprbGitHubAuth> {
          * @param credentialsId the credentialsId from the credentials plugin
          * @return list box model.
          */
+        @POST
         public ListBoxModel doFillCredentialsIdItems(
                 @AncestorInPath Item context,
                 @QueryParameter String serverAPIUrl,
                 @QueryParameter String credentialsId
         ) {
+            if (context != null) {
+                context.checkPermission(Item.EXTENDED_READ);
+            } else {
+                Jenkins.get().checkPermission(Jenkins.ADMINISTER);
+            }
             List<DomainRequirement> domainRequirements = URIRequirementBuilder.fromUri(serverAPIUrl).build();
 
             List<CredentialsMatcher> matchers = new ArrayList<>(INITIAL_CAPACITY);
@@ -281,7 +287,7 @@ public class GhprbGitHubAuth extends AbstractDescribableImpl<GhprbGitHubAuth> {
                 @QueryParameter("password") final String password) {
             try {
 
-                Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+                Jenkins.get().checkPermission(Jenkins.ADMINISTER);
 
                 GitHubBuilder builder = new GitHubBuilder()
                         .withEndpoint(serverAPIUrl)
@@ -318,7 +324,9 @@ public class GhprbGitHubAuth extends AbstractDescribableImpl<GhprbGitHubAuth> {
             }
         }
 
+        @POST
         public FormValidation doCheckServerAPIUrl(@QueryParameter String value) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             if ("https://api.github.com".equals(value)) {
                 return FormValidation.ok();
             }
@@ -334,7 +342,7 @@ public class GhprbGitHubAuth extends AbstractDescribableImpl<GhprbGitHubAuth> {
                 @QueryParameter("credentialsId") final String credentialsId,
                 @QueryParameter("repo") final String repo) {
 
-            Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
 
             try {
                 GitHubBuilder builder = getBuilder(null, serverAPIUrl, credentialsId);
@@ -368,7 +376,7 @@ public class GhprbGitHubAuth extends AbstractDescribableImpl<GhprbGitHubAuth> {
                 @QueryParameter("serverAPIUrl") final String serverAPIUrl,
                 @QueryParameter("credentialsId") final String credentialsId) {
 
-            Jenkins.getInstance().checkPermission(Jenkins.ADMINISTER);
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
 
             try {
                 GitHubBuilder builder = getBuilder(null, serverAPIUrl, credentialsId);
@@ -389,12 +397,14 @@ public class GhprbGitHubAuth extends AbstractDescribableImpl<GhprbGitHubAuth> {
         }
 
 
+        @POST
         public FormValidation doTestComment(
                 @QueryParameter("serverAPIUrl") final String serverAPIUrl,
                 @QueryParameter("credentialsId") final String credentialsId,
                 @QueryParameter("repo") final String repoName,
                 @QueryParameter("issueId") final int issueId,
                 @QueryParameter("message1") final String comment) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             try {
                 GitHubBuilder builder = getBuilder(null, serverAPIUrl, credentialsId);
                 if (builder == null) {
@@ -411,6 +421,7 @@ public class GhprbGitHubAuth extends AbstractDescribableImpl<GhprbGitHubAuth> {
             }
         }
 
+        @POST
         public FormValidation doTestUpdateStatus(
                 @QueryParameter("serverAPIUrl") final String serverAPIUrl,
                 @QueryParameter("credentialsId") final String credentialsId,
@@ -420,6 +431,7 @@ public class GhprbGitHubAuth extends AbstractDescribableImpl<GhprbGitHubAuth> {
                 @QueryParameter("url") final String url,
                 @QueryParameter("message2") final String message,
                 @QueryParameter("context") final String context) {
+            Jenkins.get().checkPermission(Jenkins.ADMINISTER);
             try {
                 GitHubBuilder builder = getBuilder(null, serverAPIUrl, credentialsId);
                 if (builder == null) {
@@ -434,6 +446,7 @@ public class GhprbGitHubAuth extends AbstractDescribableImpl<GhprbGitHubAuth> {
             }
         }
 
+        @POST
         public ListBoxModel doFillStateItems(@QueryParameter("state") String state) {
             ListBoxModel items = new ListBoxModel();
             for (GHCommitState commitState : GHCommitState.values()) {
