@@ -31,3 +31,16 @@ Things to help you develop
 
 #### Tips
 * There are many interactions with GitHub as part of the plugin, and we currently don't have a test harness that can stand in place of the GitHub API or cloning. If running an instance on localhost (for example, using a docker image or using hpi:run in an IDE), you can use ngrok, as described on [GitHub docs](https://developer.github.com/webhooks/configuring/#using-ngrok). That can be helpful for catching webhooks and directing them to the localhost instance. (Remember you're opening your localhost to the world, and we assume you understand the risks and the local firewall/port restrictions.)
+
+#### Understanding the Codebase
+
+* See [ARCHITECTURE.md](ARCHITECTURE.md) for an overview of how the plugin works — the two operating modes, the key classes, and the startup and webhook data flows.
+* Key entry points:
+  * `GhprbTrigger.start()` — called when a job with this trigger loads
+  * `GhprbRootAction.doIndex()` — HTTP endpoint for incoming webhooks
+  * `GhprbRepository.check()` — polling entrypoint (runs on cron schedule)
+  * `GhprbTrigger.DescriptorImpl.doValidateJobConfiguration()` — AJAX endpoint for job configuration validation
+* The linting system (`GhprbJobLinter`) validates job configuration at two points:
+  * **Automatic**: runs in `GhprbTrigger.start()` and logs any issues
+  * **On-demand**: called via AJAX from the web UI when users click "Validate Configuration"
+  * Always non-blocking — validation issues do not prevent the trigger from running

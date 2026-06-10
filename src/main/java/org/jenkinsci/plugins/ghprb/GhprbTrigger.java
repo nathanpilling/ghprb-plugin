@@ -327,6 +327,16 @@ public class GhprbTrigger extends GhprbTriggerBackwardsCompatible {
 
         helper = new Ghprb(this);
 
+        // Lint the job configuration
+        GhprbJobLinter linter = lintJob();
+        if (linter.hasErrors()) {
+            LOGGER.log(Level.WARNING, "Job {0} has configuration issues:\n{1}", 
+                    new Object[] {name, linter.toString()});
+        } else if (linter.hasWarnings()) {
+            LOGGER.log(Level.FINE, "Job {0} has configuration recommendations:\n{1}",
+                    new Object[] {name, linter.toString()});
+        }
+
         if (getUseGitHubHooks()) {
             LOGGER.log(Level.FINEST, "Disable registering hooks on startup: {0}",
                     new String[] {String.valueOf(DISABLE_REGISTER_ON_STARTUP)});
@@ -719,6 +729,16 @@ public class GhprbTrigger extends GhprbTriggerBackwardsCompatible {
         return projectName;
     }
 
+    /**
+     * Runs job configuration linting to verify the job is properly set up for ghprb.
+     * @return A GhprbJobLinter instance with validation results
+     */
+    public GhprbJobLinter lintJob() {
+        GhprbJobLinter linter = new GhprbJobLinter(super.job);
+        linter.lint();
+        return linter;
+    }
+
     public boolean matchSignature(String body, String signature) {
         if (!isActive()) {
             return false;
@@ -1016,6 +1036,65 @@ public class GhprbTrigger extends GhprbTriggerBackwardsCompatible {
                                             + "Separate them with whitespaces.");
             }
             return FormValidation.ok();
+        }
+
+        /**
+         * Lints the job configuration to ensure it's properly set up for GitHub Pull Request Builder.
+         * This is called when validating the trigger configuration.
+         */
+        public FormValidation doLintJob() throws ServletException {
+            Item item = Jenkins.getInstance().getItem("lint-target");
+            if (!(item instanceof Job)) {
+                return FormValidation.warning("Unable to determine job type for linting");
+            }
+
+            Job<?, ?> job = (Job<?, ?>) item;
+            GhprbJobLinter linter = new GhprbJobLinter(job);
+            linter.lint();
+            return linter.toFormValidation();
+        }
+
+        /**
+         * AJAX endpoint for validating job configuration from the web UI.
+         * Returns JSON with configuration errors and warnings.
+         */
+        public net.sf.json.JSONObject doValidateJobConfiguration(@QueryParameter String jobName) 
+                throws ServletException, IOException {
+            net.sf.json.JSONObject result = new net.sf.json.JSONObject();
+            result.put("errors", new net.sf.json.JSONArray());
+            result.put("warnings", new net.sf.json.JSONArray());
+            
+            if (jobName == null || jobName.trim().isEmpty()) {
+                result.getJSONArray("errors").add("Job name is required");
+                return result;
+            }
+            
+            Item item = Jenkins.getInstance().getItem(jobName);
+            if (item == null) {
+                result.getJSONArray("errors").add("Job '" + jobName + "' not found");
+                return result;
+            }
+            
+            if (!(item instanceof Job)) {
+                result.getJSONArray("errors").add("Item '" + jobName + "' is not a Job");
+                return result;
+            }
+            
+            Job<?, ?> job = (Job<?, ?>) item;
+            GhprbJobLinter linter = new GhprbJobLinter(job);
+            linter.lint();
+            
+            // Add errors
+            for (String error : linter.getErrors()) {
+                result.getJSONArray("errors").add(error);
+            }
+            
+            // Add warnings
+            for (String warning : linter.getWarnings()) {
+                result.getJSONArray("warnings").add(warning);
+            }
+            
+            return result;
         }
 
         public ListBoxModel doFillUnstableAsItems() {

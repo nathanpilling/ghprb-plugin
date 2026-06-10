@@ -48,6 +48,34 @@ That `repoJobs` map is the routing table used when a webhook arrives.
 | `GhprbBuilds` | Hooks into `RunListener` to fire at build start and completion. Posts commit statuses to GitHub and optionally posts comments or closes PRs. |
 | `Ghprb` | Stateless business logic helper. Pattern matching, whitelist/admin/org checks, credentials lookup, extension merging. |
 | `GhprbGitHubAuth` | Wraps a Jenkins credentials ID. Builds authenticated GitHub connections via `GitHubBuilder`. Also handles HMAC-SHA1 webhook signature verification. |
+| `GhprbJobLinter` | Validates job configuration to ensure it's properly set up for the plugin. Checks GitHub project URL, Git SCM, refspec, and branch specifier configuration. |
+
+---
+
+## Configuration Validation (Linting)
+
+The plugin includes a `GhprbJobLinter` that validates freestyle job configuration and reports issues to users at two points:
+
+**1. Automatic (startup time)**
+- Called in `GhprbTrigger.start()` after the trigger is fully initialized
+- Logs warnings if configuration issues are found
+- Errors logged at `WARNING` level, recommendations at `FINE` level
+- Does not block trigger startup; intended as diagnostic only
+
+**2. On-demand (job configuration UI)**
+- Users can click "Validate Configuration" button in the trigger settings
+- Triggered via AJAX endpoint `GhprbTrigger.DescriptorImpl.doValidateJobConfiguration()`
+- Returns JSON with `errors` and `warnings` arrays
+- Displayed inline in the job configuration form without requiring a page refresh
+
+**What the linter checks:**
+- GitHub Project URL is configured
+- Job uses Git SCM (not SVN, Mercurial, etc.)
+- Git refspec references pull request branches (`${ghprbPullId}`)
+- Branch Specifier uses ghprb variables (`${ghprbActualCommit}` or `${sha1}`)
+- Git extensions for problematic configurations
+
+This design allows users to catch misconfigurations early before saving, while also helping Jenkins administrators diagnose setup issues from logs.
 
 ---
 

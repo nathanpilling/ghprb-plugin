@@ -134,6 +134,34 @@ descriptor.save()
 
 Make sure you **DON'T** have `Prune remote branches before build` advanced option selected, since it will prune the branch created to test this build.
 
+#### Validating Job Configuration
+
+The plugin includes a built-in configuration validator to help ensure your job is set up correctly for GitHub Pull Request Builder. This validator checks:
+
+* **GitHub Project URL** - Required for the plugin to communicate with GitHub
+* **Git SCM Configuration** - Must use Git as the source control system
+* **Git Refspec** - Should properly reference pull request branches
+* **Branch Specifier** - Must use ghprb variables (`${ghprbActualCommit}` or `${sha1}`)
+
+**Using the Validator:**
+
+1. Open a job's configuration page where GitHub Pull Request Builder is enabled
+2. Look for the **"Configuration Validation"** panel at the top of the trigger settings
+3. Click the **"Validate Configuration"** button
+4. The validator will check your job configuration and display:
+   - **Red errors** - Critical issues that must be fixed for the plugin to work
+   - **Yellow warnings** - Recommendations for best practices
+   - **Green checkmark** - Configuration is correctly set up
+
+**Example Configuration Issues Detected:**
+
+* Missing GitHub project URL
+* Git SCM not configured
+* Branch specifier missing ghprb variables
+* Refspec not including pull request branches
+
+You can validate at any time before saving to ensure your configuration is correct. The validator also runs automatically when the trigger starts up and logs any issues to Jenkins logs.
+
 #### Parameterized Builds
 If you want to manually build the job, in the job setting check `This build is parameterized` and add string parameter named `sha1` with a default value of `master`. When starting build give the `sha1` parameter commit id you want to build or refname (eg: `origin/pr/9/head`).
 

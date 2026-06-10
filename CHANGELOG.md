@@ -1,5 +1,15 @@
 ### Updates
 
+### -> Unreleased
+
+* Feature: Job Configuration Validator (Linter) - validates GitHub project URL, Git SCM, refspec, and branch specifier configuration
+  * Web UI integration with "Validate Configuration" button in trigger settings
+  * Real-time validation feedback with errors and recommendations
+  * Automatic validation on trigger startup with logging
+  * New class `GhprbJobLinter` for configuration validation
+  * New AJAX endpoint `doValidateJobConfiguration()` for web UI validation
+  * Documentation updates to README and ARCHITECTURE
+
 ### -> 1.42.1
 
 * No longer use deprecated github-api API `gitHttpTransportUrl()` ([#772][#772])
